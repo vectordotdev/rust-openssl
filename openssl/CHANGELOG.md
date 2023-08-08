@@ -2,6 +2,38 @@
 
 ## [Unreleased]
 
+## [v0.10.56] - 2023-08-06
+
+## Added
+
+* Added `BigNumRef::mod_sqrt`.
+* Added `PkeyCtxRef::set_signature_md` and `PkeyCtxRef::set_rsa_pss_saltlen`.
+* Added `PkeyCtxRef::verify_recover_init` and `PkeyCtxRef::verify_recover`.
+* Added `BigNumRef::is_even` and `BigNumRef::is_odd`.
+* Added `EcPointRef::to_hex_str` and `EcPoint::from_hex_str`.
+* Added support for AES key wrap and wrap pad.
+
+## [v0.10.55] - 2023-06-20
+
+### Fixed
+
+* Fixed compilation with the latest version of BoringSSL.
+* Fixed compilation when OpenSSL is compiled with `OPENSSL_NO_OCB`.
+* Fixed a segfault in `X509VerifyParamRef::set_host` when called with an empty string.
+
+### Added
+
+* Added `Deriver::set_peer_ex`.
+* Added `EcGroupRef::asn1_flag`.
+* Exposed `EcPointRef::affine_coordinates` on BoringSSL and LibreSSL.
+* Added `Nid::SM2` and `Id::SM2`
+
+## [v0.10.54] - 2023-05-31
+
+### Fixed
+
+* `PKey::private_key_to_pkcs8_passphrase` no longer panics if a `passphrase` contains a NUL byte.
+
 ## [v0.10.53] - 2023-05-30
 
 ### Added
@@ -755,8 +787,11 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.53...master
-[v0.10.52]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.52...openssl-v0.10.53
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.56...master
+[v0.10.56]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.55...openssl-v0.10.56
+[v0.10.55]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.54...openssl-v0.10.55
+[v0.10.54]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.53...openssl-v0.10.54
+[v0.10.53]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.52...openssl-v0.10.53
 [v0.10.52]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.51...openssl-v0.10.52
 [v0.10.51]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.50...openssl-v0.10.51
 [v0.10.50]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.49...openssl-v0.10.50

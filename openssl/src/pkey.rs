@@ -57,7 +57,7 @@ use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::{c_int, c_long};
 use openssl_macros::corresponds;
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
 use std::ffi::CString;
 use std::fmt;
 use std::mem;
@@ -85,6 +85,8 @@ impl Id {
     pub const DSA: Id = Id(ffi::EVP_PKEY_DSA);
     pub const DH: Id = Id(ffi::EVP_PKEY_DH);
     pub const EC: Id = Id(ffi::EVP_PKEY_EC);
+    #[cfg(ossl111)]
+    pub const SM2: Id = Id(ffi::EVP_PKEY_SM2);
 
     #[cfg(any(ossl110, boringssl))]
     pub const HKDF: Id = Id(ffi::EVP_PKEY_HKDF);
@@ -350,10 +352,6 @@ where
 
     /// Serializes a private key into a DER-formatted PKCS#8, using the supplied password to
     /// encrypt the key.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `passphrase` contains an embedded null.
     #[corresponds(i2d_PKCS8PrivateKey_bio)]
     pub fn private_key_to_pkcs8_passphrase(
         &self,
@@ -362,14 +360,12 @@ where
     ) -> Result<Vec<u8>, ErrorStack> {
         unsafe {
             let bio = MemBio::new()?;
-            let len = passphrase.len();
-            let passphrase = CString::new(passphrase).unwrap();
             cvt(ffi::i2d_PKCS8PrivateKey_bio(
                 bio.as_ptr(),
                 self.as_ptr(),
                 cipher.as_ptr(),
                 passphrase.as_ptr() as *const _ as *mut _,
-                len as ::libc::c_int,
+                passphrase.len().try_into().unwrap(),
                 None,
                 ptr::null_mut(),
             ))?;
@@ -412,11 +408,7 @@ impl<T> PKey<T> {
         unsafe {
             let evp = cvt_p(ffi::EVP_PKEY_new())?;
             let pkey = PKey::from_ptr(evp);
-            cvt(ffi::EVP_PKEY_assign(
-                pkey.0,
-                ffi::EVP_PKEY_RSA,
-                rsa.as_ptr() as *mut _,
-            ))?;
+            cvt(ffi::EVP_PKEY_assign_RSA(pkey.0, rsa.as_ptr()))?;
             mem::forget(rsa);
             Ok(pkey)
         }
@@ -428,11 +420,7 @@ impl<T> PKey<T> {
         unsafe {
             let evp = cvt_p(ffi::EVP_PKEY_new())?;
             let pkey = PKey::from_ptr(evp);
-            cvt(ffi::EVP_PKEY_assign(
-                pkey.0,
-                ffi::EVP_PKEY_DSA,
-                dsa.as_ptr() as *mut _,
-            ))?;
+            cvt(ffi::EVP_PKEY_assign_DSA(pkey.0, dsa.as_ptr()))?;
             mem::forget(dsa);
             Ok(pkey)
         }
@@ -440,15 +428,12 @@ impl<T> PKey<T> {
 
     /// Creates a new `PKey` containing a Diffie-Hellman key.
     #[corresponds(EVP_PKEY_assign_DH)]
+    #[cfg(not(boringssl))]
     pub fn from_dh(dh: Dh<T>) -> Result<PKey<T>, ErrorStack> {
         unsafe {
             let evp = cvt_p(ffi::EVP_PKEY_new())?;
             let pkey = PKey::from_ptr(evp);
-            cvt(ffi::EVP_PKEY_assign(
-                pkey.0,
-                ffi::EVP_PKEY_DH,
-                dh.as_ptr() as *mut _,
-            ))?;
+            cvt(ffi::EVP_PKEY_assign_DH(pkey.0, dh.as_ptr()))?;
             mem::forget(dh);
             Ok(pkey)
         }
@@ -460,11 +445,7 @@ impl<T> PKey<T> {
         unsafe {
             let evp = cvt_p(ffi::EVP_PKEY_new())?;
             let pkey = PKey::from_ptr(evp);
-            cvt(ffi::EVP_PKEY_assign(
-                pkey.0,
-                ffi::EVP_PKEY_EC,
-                ec_key.as_ptr() as *mut _,
-            ))?;
+            cvt(ffi::EVP_PKEY_assign_EC_KEY(pkey.0, ec_key.as_ptr()))?;
             mem::forget(ec_key);
             Ok(pkey)
         }
@@ -867,6 +848,7 @@ impl<T> TryFrom<PKey<T>> for Dsa<T> {
     }
 }
 
+#[cfg(not(boringssl))]
 impl<T> TryFrom<Dh<T>> for PKey<T> {
     type Error = ErrorStack;
 
